@@ -9,6 +9,7 @@ from xml.dom import minidom
 try: from hashlib import md5
 except ImportError: from md5 import md5
 
+
 def make_utf8(dictionary):
     '''
     Encodes all Unicode strings in the dictionary to UTF-8. Converts
@@ -25,6 +26,15 @@ def make_utf8(dictionary):
             value = str(value)
         result[key] = value
     return result
+
+
+class ScormCloudError(Exception):
+    def __init__(self, msg, json=None):
+        self.msg = msg
+        self.json = json
+    def __str__(self):
+        return repr(self.msg)
+
 
 class ScormCloudService(object):
     def __init__(self, appid, secret, servicehost):
@@ -71,58 +81,30 @@ class ScormCloudService(object):
         return reply
 
 
-class DebugService(ScormCloudService):
-    def cloud_auth_ping(self):
-        data = self.scormcloud_call(method='rustici.debug.authPing')
+class CourseData(object):
+    course_id = ""
+    number_of_versions = 1
+    number_of_registrations = 0
+    title = ""
+
+    def __init__(self, course_data_element):
+        if course_data_element is not None:
+            self.course_id = course_data_element.attributes['id'].value
+            self.number_of_versions = course_data_element.attributes['versions'].value
+            self.number_of_registrations = course_data_element.attributes['registrations'].value
+            self.title = course_data_element.attributes['title'].value
+
+    def  __getattr__(self, attrib):
+        return self.attrib
+
+    @staticmethod
+    def convert_to_course_data_list(data):
         xmldoc = minidom.parseString(data)
-        return xmldoc.documentElement.attributes['stat'].value == 'ok'
-
-    def cloud_ping(self):
-        data = self.scormcloud_call(method='rustici.debug.ping')
-        xmldoc = minidom.parseString(data)
-        return xmldoc.documentElement.attributes['stat'].value == 'ok'
-
-
-class UploadService(ScormCloudService):
-    def get_upload_token(self):
-        data = self.scormcloud_call(method='rustici.upload.getUploadToken')
-        xmldoc = minidom.parseString(data)
-        server_nodes = xmldoc.getElementsByTagName('server')
-        tokenid_nodes = xmldoc.getElementsByTagName('id')
-        server = None
-        for s in server_nodes:
-            server = s.childNodes[0].nodeValue
-        tokenid = None
-        for t in tokenid_nodes:
-            tokenid = t.childNodes[0].nodeValue
-        if server and tokenid:
-            token = UploadToken(server, tokenid)
-            return token
-        else:
-            return None
-
-    def get_upload_url(self, importurl):
-        token = self.get_upload_token()
-        if token:
-            params = {
-                'method': 'rustici.upload.uploadFile',
-                'appid': self.appid,
-                'tokenid': token.tokenid,
-                'redirecturl': importurl,
-            }
-            sig = self.encode_and_sign(params)
-            url =  '%s/api?' % (self.servicehost)
-            url = url + sig
-            return url
-        else:
-            return None
-
-    def delete_file(self, location):
-        loc_parts = location.split("/")
-        params = {}
-        params['file'] = loc_parts[1]
-        params['method'] = "rustici.upload.deleteFiles"
-        return self.scormcloud_call(**params)
+        all_results = []
+        courses = xmldoc.getElementsByTagName("course")
+        for course in courses:
+            all_results.append(CourseData(course))
+        return all_results
 
 
 class CourseService(ScormCloudService):
@@ -221,6 +203,72 @@ class CourseService(ScormCloudService):
             atts[an.attributes['name'].value] = an.attributes['value'].value
         return atts
 
+
+class DebugService(ScormCloudService):
+    def cloud_auth_ping(self):
+        data = self.scormcloud_call(method='rustici.debug.authPing')
+        xmldoc = minidom.parseString(data)
+        return xmldoc.documentElement.attributes['stat'].value == 'ok'
+
+    def cloud_ping(self):
+        data = self.scormcloud_call(method='rustici.debug.ping')
+        xmldoc = minidom.parseString(data)
+        return xmldoc.documentElement.attributes['stat'].value == 'ok'
+
+
+class ImportResult(object):
+    was_successful = False
+    title = ""
+    message = ""
+    parser_warnings = []
+
+    def __init__(self, import_result_element):
+        if import_result_element is not None:
+            self.was_successful = \
+                import_result_element.attributes['successful'].value == 'true'
+            self.title = import_result_element.getElementsByTagName(
+                "title")[0].childNodes[0].nodeValue
+            self.message = import_result_element.getElementsByTagName(
+                "message")[0].childNodes[0].nodeValue
+            xmlpw = import_result_element.getElementsByTagName("warning")
+            for pw in xmlpw:
+                self.parser_warnings.append(pw.childNodes[0].nodeValue)
+
+    def  __getattr__(self, attrib):
+        return self.attrib
+
+    @staticmethod
+    def convert_to_import_results(data):
+        xmldoc = minidom.parseString(data)
+        all_results = []
+        importresults = xmldoc.getElementsByTagName("importresult")
+        for ir in importresults:
+            all_results.append(ImportResult(ir))
+        return all_results
+
+
+class RegistrationData(object):
+    courseId = ""
+    registration_id = ""
+
+    def __init__(self, reg_data_element):
+        if reg_data_element is not None:
+            self.courseId = reg_data_element.attributes['courseid'].value
+            self.registration_id = reg_data_element.attributes['id'].value
+
+    def  __getattr__(self, attrib):
+        return self.attrib
+
+    @staticmethod
+    def convert_to_registration_data_list(data):
+        xmldoc = minidom.parseString(data)
+        all_results = []
+        regs = xmldoc.getElementsByTagName("registration")
+        for reg in regs:
+            all_results.append(RegistrationData(reg))
+        return all_results
+
+
 class RegistrationService(ScormCloudService):
     def create_registration(self, regid, courseid, userid, fname, lname,
         email=None):
@@ -315,67 +363,48 @@ class RegistrationService(ScormCloudService):
             params['instanceid'] = 'latest'
         return self.scormcloud_call(**params)
 
-class ScormCloudError(Exception):
-    def __init__(self, msg, json=None):
-        self.msg = msg
-        self.json = json
-    def __str__(self):
-        return repr(self.msg)
 
-class ImportResult(object):
-    was_successful = False
-    title = ""
-    message = ""
-    parser_warnings = []
-
-    def __init__(self, import_result_element):
-        if import_result_element is not None:
-            self.was_successful = \
-                import_result_element.attributes['successful'].value == 'true'
-            self.title = import_result_element.getElementsByTagName(
-                "title")[0].childNodes[0].nodeValue
-            self.message = import_result_element.getElementsByTagName(
-                "message")[0].childNodes[0].nodeValue
-            xmlpw = import_result_element.getElementsByTagName("warning")
-            for pw in xmlpw:
-                self.parser_warnings.append(pw.childNodes[0].nodeValue)
-
-    def  __getattr__(self, attrib):
-        return self.attrib
-
-    @staticmethod
-    def convert_to_import_results(data):
+class UploadService(ScormCloudService):
+    def get_upload_token(self):
+        data = self.scormcloud_call(method='rustici.upload.getUploadToken')
         xmldoc = minidom.parseString(data)
-        all_results = []
-        importresults = xmldoc.getElementsByTagName("importresult")
-        for ir in importresults:
-            all_results.append(ImportResult(ir))
-        return all_results
+        server_nodes = xmldoc.getElementsByTagName('server')
+        tokenid_nodes = xmldoc.getElementsByTagName('id')
+        server = None
+        for s in server_nodes:
+            server = s.childNodes[0].nodeValue
+        tokenid = None
+        for t in tokenid_nodes:
+            tokenid = t.childNodes[0].nodeValue
+        if server and tokenid:
+            token = UploadToken(server, tokenid)
+            return token
+        else:
+            return None
 
-class CourseData(object):
-    course_id = ""
-    number_of_versions = 1
-    number_of_registrations = 0
-    title = ""
+    def get_upload_url(self, importurl):
+        token = self.get_upload_token()
+        if token:
+            params = {
+                'method': 'rustici.upload.uploadFile',
+                'appid': self.appid,
+                'tokenid': token.tokenid,
+                'redirecturl': importurl,
+            }
+            sig = self.encode_and_sign(params)
+            url =  '%s/api?' % (self.servicehost)
+            url = url + sig
+            return url
+        else:
+            return None
 
-    def __init__(self, course_data_element):
-        if course_data_element is not None:
-            self.course_id = course_data_element.attributes['id'].value
-            self.number_of_versions = course_data_element.attributes['versions'].value
-            self.number_of_registrations = course_data_element.attributes['registrations'].value
-            self.title = course_data_element.attributes['title'].value
+    def delete_file(self, location):
+        loc_parts = location.split("/")
+        params = {}
+        params['file'] = loc_parts[1]
+        params['method'] = "rustici.upload.deleteFiles"
+        return self.scormcloud_call(**params)
 
-    def  __getattr__(self, attrib):
-        return self.attrib
-
-    @staticmethod
-    def convert_to_course_data_list(data):
-        xmldoc = minidom.parseString(data)
-        all_results = []
-        courses = xmldoc.getElementsByTagName("course")
-        for course in courses:
-            all_results.append(CourseData(course))
-        return all_results
 
 class UploadToken(object):
     server = ""
@@ -386,24 +415,3 @@ class UploadToken(object):
 
     def __getattr__(self, attrib):
         return self.attrib
-
-class RegistrationData(object):
-    courseId = ""
-    registration_id = ""
-
-    def __init__(self, reg_data_element):
-        if reg_data_element is not None:
-            self.courseId = reg_data_element.attributes['courseid'].value
-            self.registration_id = reg_data_element.attributes['id'].value
-
-    def  __getattr__(self, attrib):
-        return self.attrib
-
-    @staticmethod
-    def convert_to_registration_data_list(data):
-        xmldoc = minidom.parseString(data)
-        all_results = []
-        regs = xmldoc.getElementsByTagName("registration")
-        for reg in regs:
-            all_results.append(RegistrationData(reg))
-        return all_results
