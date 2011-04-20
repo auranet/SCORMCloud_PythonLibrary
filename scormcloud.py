@@ -79,20 +79,20 @@ class ScormCloudApi(object):
 
 
 class DebugService(ScormCloudApi):
-    def CloudAuthPing(self):
+    def cloud_auth_ping(self):
         data = self.scormcloud_call(method='rustici.debug.authPing')
         xmldoc = minidom.parseString(data)
         #logging.info('cloudauthping: ' + str(xmldoc.documentElement.attributes['stat'].value))
         return xmldoc.documentElement.attributes['stat'].value == 'ok'
 
-    def CloudPing(self):
+    def cloud_ping(self):
         data = self.scormcloud_call(method='rustici.debug.ping')
         xmldoc = minidom.parseString(data)
         return xmldoc.documentElement.attributes['stat'].value == 'ok'
 
 
 class UploadService(ScormCloudApi):
-    def GetUploadToken(self):
+    def get_upload_token(self):
         data = self.scormcloud_call(method='rustici.upload.getUploadToken')
         xmldoc = minidom.parseString(data)
         serverNodes = xmldoc.getElementsByTagName('server')
@@ -109,8 +109,8 @@ class UploadService(ScormCloudApi):
         else:
             return None
 
-    def GetUploadUrl(self, importurl):
-        token = self.GetUploadToken()
+    def get_upload_url(self, importurl):
+        token = self.get_upload_token()
         if token:
             params = {
                 'method': 'rustici.upload.uploadFile',
@@ -125,7 +125,7 @@ class UploadService(ScormCloudApi):
         else:
             return None
 
-    def DeleteFile(self, location):
+    def delete_file(self, location):
         locParts = location.split("/")
         params = {}
         params['file'] = locParts[1]
@@ -134,15 +134,15 @@ class UploadService(ScormCloudApi):
 
 
 class CourseService(ScormCloudApi):
-    def ImportUploadedCourse(self, courseid, path):
+    def import_uploaded_course(self, courseid, path):
         if courseid is None:
             courseid = str(uuid.uuid1())
         data = self.scormcloud_call(method='rustici.course.importCourse',
             path=path, courseid=courseid)
-        ir = ImportResult.ConvertToImportResults(data)
+        ir = ImportResult.convert_to_import_results(data)
         return ir
 
-    def DeleteCourse(self, courseid, deleteLatestVersionOnly=False):
+    def delete_course(self, courseid, deleteLatestVersionOnly=False):
         params = {}
         params['courseid'] = courseid
         params['method'] = "rustici.course.deleteCourse"
@@ -150,7 +150,7 @@ class CourseService(ScormCloudApi):
             params['versionid'] = 'latest'
         data = self.scormcloud_call(**params)
 
-    def GetAssets(self, courseid, path=None):
+    def get_assets(self, courseid, path=None):
         if path is not None:
             data = self.scormcloud_call(method='rustici.course.getAssets',
                 courseid=courseid, path=path)
@@ -159,16 +159,16 @@ class CourseService(ScormCloudApi):
                 courseid=courseid)
         return data
 
-    def GetCourseList(self, courseIdFilterRegex=None):
+    def get_course_list(self, courseIdFilterRegex=None):
         if courseIdFilterRegex is not None:
             data = self.scormcloud_call(method='rustici.course.getCourseList',
                 filter=courseIdFilterRegex)
         else:
             data = self.scormcloud_call(method='rustici.course.getCourseList')
-        courseList = CourseData.ConvertToCourseDataList(data)
+        courseList = CourseData.convert_to_course_data_list(data)
         return courseList
 
-    def GetPreviewUrl(self, courseid, redirecturl, stylesheetUrl=None):
+    def get_preview_url(self, courseid, redirecturl, stylesheetUrl=None):
         params = {}
         params['method'] = "rustici.course.preview"
         params['courseid'] = courseid
@@ -181,11 +181,11 @@ class CourseService(ScormCloudApi):
         url = url + sig
         return url
 
-    def GetCourseMetadata(self, courseid):
+    def get_course_metadata(self, courseid):
         return self.scormcloud_call(method='rustici.course.getMetadata',
             courseid=courseid)
 
-    def GetPropertyEditorUrl(self, courseid, stylesheetUrl=None,
+    def get_property_editor_url(self, courseid, stylesheetUrl=None,
         notificationFrameUrl=None):
 
         params = {}
@@ -201,7 +201,7 @@ class CourseService(ScormCloudApi):
         url = url + sig
         return url
 
-    def GetAttributes(self, courseid, versionid=None):
+    def get_attributes(self, courseid, versionid=None):
         params = {}
         params['method'] = "rustici.course.getAttributes"
         params['courseid'] = courseid
@@ -215,7 +215,7 @@ class CourseService(ScormCloudApi):
             atts[an.attributes['name'].value] = an.attributes['value'].value
         return atts
 
-    def UpdateAttributes(self, courseid, versionid, attributePairs):
+    def update_attributes(self, courseid, versionid, attributePairs):
         params = {}
         params['method'] = "rustici.course.updateAttributes"
         params['courseid'] = courseid
@@ -231,7 +231,7 @@ class CourseService(ScormCloudApi):
         return atts
 
 class RegistrationService(ScormCloudApi):
-    def CreateRegistration(self, regid, courseid, userid, fname, lname,
+    def create_registration(self, regid, courseid, userid, fname, lname,
         email=None):
 
         if regid is None:
@@ -253,7 +253,7 @@ class RegistrationService(ScormCloudApi):
             raise ScormCloudError("Create Registration failed.  " + xmldoc.err.attributes['msg'] )
         return regid
 
-    def GetLaunchUrl(self, regid, redirecturl, courseTags=None,
+    def get_launch_url(self, regid, redirecturl, courseTags=None,
         learnerTags=None, registrationTags=None):
 
         redirecturl = redirecturl + "?regid=" + regid
@@ -275,7 +275,7 @@ class RegistrationService(ScormCloudApi):
         url = url + sig
         return url
 
-    def GetRegistrationList(self, regIdFilterRegex=None,
+    def get_registration_list(self, regIdFilterRegex=None,
         courseIdFilterRegex=None):
 
         params = {}
@@ -286,10 +286,10 @@ class RegistrationService(ScormCloudApi):
             params['coursefilter'] = courseIdFilterRegex
 
         data = self.scormcloud_call(**params)
-        regList = RegistrationData.ConvertToRegistrationDataList(data)
+        regList = RegistrationData.convert_to_registration_data_list(data)
         return regList
 
-    def GetRegistrationResult(self, regid, resultsformat,
+    def get_registration_result(self, regid, resultsformat,
         dataformat=None):
 
         params = {}
@@ -301,15 +301,15 @@ class RegistrationService(ScormCloudApi):
         data = self.scormcloud_call(**params)
         return data
 
-    def GetLaunchHistory(self, regid):
+    def get_launch_history(self, regid):
         return self.scormcloud_call(
             method='rustici.registration.getLaunchHistory', regid=regid)
 
-    def ResetRegistration(self, regid):
+    def reset_registration(self, regid):
         return self.scormcloud_call(
             method='rustici.registration.resetRegistration', regid=regid)
 
-    def ResetGlobalObjectives(self, regid, deleteLatestInstanceOnly=True):
+    def reset_global_objectives(self, regid, deleteLatestInstanceOnly=True):
         params = {}
         params['method'] = "rustici.registration.resetGlobalObjectives"
         params['regid'] = regid
@@ -318,7 +318,7 @@ class RegistrationService(ScormCloudApi):
         data = self.scormcloud_call(**params)
         return data
 
-    def DeleteRegistration(self, regid, deleteLatestInstanceOnly=False):
+    def delete_registration(self, regid, deleteLatestInstanceOnly=False):
         params = {}
         params['method'] = "rustici.registration.deleteRegistration"
         params['regid'] = regid
@@ -354,7 +354,7 @@ class ImportResult(object):
         return self.attrib
 
     @staticmethod
-    def ConvertToImportResults(data):
+    def convert_to_import_results(data):
         xmldoc = minidom.parseString(data)
         allResults = [];
         importresults = xmldoc.getElementsByTagName("importresult")
@@ -379,7 +379,7 @@ class CourseData(object):
         return self.attrib
 
     @staticmethod
-    def ConvertToCourseDataList(data):
+    def convert_to_course_data_list(data):
         xmldoc = minidom.parseString(data)
         allResults = [];
         courses = xmldoc.getElementsByTagName("course")
@@ -410,7 +410,7 @@ class RegistrationData(object):
         return self.attrib
 
     @staticmethod
-    def ConvertToRegistrationDataList(data):
+    def convert_to_registration_data_list(data):
         xmldoc = minidom.parseString(data)
         allResults = [];
         regs = xmldoc.getElementsByTagName("registration")
