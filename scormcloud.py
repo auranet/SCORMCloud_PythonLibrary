@@ -353,7 +353,7 @@ class ImportResult(object):
     @staticmethod
     def convert_to_import_results(data):
         xmldoc = minidom.parseString(data)
-        all_results = [];
+        all_results = []
         importresults = xmldoc.getElementsByTagName("importresult")
         for ir in importresults:
             all_results.append(ImportResult(ir))
@@ -370,7 +370,7 @@ class CourseData(object):
             self.course_id = course_data_element.attributes['id'].value
             self.number_of_versions = course_data_element.attributes['versions'].value
             self.number_of_registrations = course_data_element.attributes['registrations'].value
-            self.title = course_data_element.attributes['title'].value;
+            self.title = course_data_element.attributes['title'].value
 
     def  __getattr__(self, attrib):
         return self.attrib
@@ -378,7 +378,7 @@ class CourseData(object):
     @staticmethod
     def convert_to_course_data_list(data):
         xmldoc = minidom.parseString(data)
-        all_results = [];
+        all_results = []
         courses = xmldoc.getElementsByTagName("course")
         for course in courses:
             all_results.append(CourseData(course))
@@ -409,7 +409,7 @@ class RegistrationData(object):
     @staticmethod
     def convert_to_registration_data_list(data):
         xmldoc = minidom.parseString(data)
-        all_results = [];
+        all_results = []
         regs = xmldoc.getElementsByTagName("registration")
         for reg in regs:
             all_results.append(RegistrationData(reg))
