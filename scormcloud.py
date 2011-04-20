@@ -1,20 +1,13 @@
-import sys
+import datetime
+import logging
 import urllib
 import urllib2
-import mimetools
-import os.path
-import logging
-import copy
-import webbrowser
-import datetime
+import uuid
+from xml.dom import minidom
 
-import cgi
 # Smartly import hashlib and fall back on md5
 try: from hashlib import md5
 except ImportError: from md5 import md5
-
-from xml.dom import minidom
-import uuid
 
 def make_utf8(dictionary):
     '''
