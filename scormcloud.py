@@ -26,7 +26,7 @@ def make_utf8(dictionary):
         result[key] = value
     return result
 
-class ScormCloudApi(object):
+class ScormCloudService(object):
     def __init__(self, appid, secret, servicehost):
         self.appid = appid
         self.secret = secret
@@ -71,7 +71,7 @@ class ScormCloudApi(object):
         return reply
 
 
-class DebugService(ScormCloudApi):
+class DebugService(ScormCloudService):
     def cloud_auth_ping(self):
         data = self.scormcloud_call(method='rustici.debug.authPing')
         xmldoc = minidom.parseString(data)
@@ -83,7 +83,7 @@ class DebugService(ScormCloudApi):
         return xmldoc.documentElement.attributes['stat'].value == 'ok'
 
 
-class UploadService(ScormCloudApi):
+class UploadService(ScormCloudService):
     def get_upload_token(self):
         data = self.scormcloud_call(method='rustici.upload.getUploadToken')
         xmldoc = minidom.parseString(data)
@@ -125,7 +125,7 @@ class UploadService(ScormCloudApi):
         return self.scormcloud_call(**params)
 
 
-class CourseService(ScormCloudApi):
+class CourseService(ScormCloudService):
     def import_uploaded_course(self, courseid, path):
         if courseid is None:
             courseid = str(uuid.uuid1())
@@ -221,7 +221,7 @@ class CourseService(ScormCloudApi):
             atts[an.attributes['name'].value] = an.attributes['value'].value
         return atts
 
-class RegistrationService(ScormCloudApi):
+class RegistrationService(ScormCloudService):
     def create_registration(self, regid, courseid, userid, fname, lname,
         email=None):
 
