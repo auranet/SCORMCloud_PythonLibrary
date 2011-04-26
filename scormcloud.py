@@ -4,11 +4,13 @@ import urllib
 import urllib2
 import uuid
 from xml.dom import minidom
+from lxml import etree
 
 # Smartly import hashlib and fall back on md5
 try: from hashlib import md5
 except ImportError: from md5 import md5
 
+logger = logging.getLogger(__name__)
 
 def make_utf8(dictionary):
     '''
@@ -78,6 +80,8 @@ class ScormCloudService(object):
         response = urllib2.urlopen(url, post_data)
         reply = response.read()
         response.close()
+        doc = etree.fromstring(reply)
+        logger.debug(etree.tostring(doc, pretty_print=True))
         return reply
 
 
@@ -248,16 +252,13 @@ class ImportResult(object):
 
 
 class RegistrationData(object):
-    courseId = ""
+    course_id = ""
     registration_id = ""
 
     def __init__(self, reg_data_element):
         if reg_data_element is not None:
-            self.courseId = reg_data_element.attributes['courseid'].value
+            self.course_id = reg_data_element.attributes['courseid'].value
             self.registration_id = reg_data_element.attributes['id'].value
-
-    def  __getattr__(self, attrib):
-        return self.attrib
 
     @staticmethod
     def convert_to_registration_data_list(data):
