@@ -344,6 +344,10 @@ class RegistrationService(ScormCloudService):
         return self.scormcloud_call(
             method='rustici.registration.getLaunchHistory', regid=regid)
 
+    def get_launch_info(self, launchid):
+        return self.scormcloud_call(
+            method='rustici.registration.getLaunchInfo', launchid=launchid)
+
     def get_registration_tags(self, regid):
         return self.scormcloud_call(
             method='rustici.tagging.getRegistrationTags', regid=regid)
